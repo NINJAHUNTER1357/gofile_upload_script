@@ -16,6 +16,7 @@ send_telegram() {
 }
 
 # Find final ROM zip
+    cd ..
     ZIP_PATH=$(find out/target/product/lisaa -name "*-lisaa*.zip" | head -n 1)
 
     if [[ -f "$ZIP_PATH" ]]; then
