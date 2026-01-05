@@ -21,7 +21,7 @@ if [[ -f "$ZIP_PATH" ]]; then
     LINK=$(curl -s -F "file=@${ZIP_PATH}" "https://${SERVER}.gofile.io/uploadFile" | jq -r '.data.downloadPage')
 
     echo "ROM uploaded: $LINK"
-    send_telegram " ^|^e <b>Build Complete</b> for Lisaa%0A<a href=\"$LINK\">Download ROM</a>"
+    send_telegram " ⚡ <b>Build Complete</b> for Lisaa%0A<a href=\"$LINK\">Download ROM</a>"
 else
     echo "ROM ZIP not found!"
     send_telegram "<b>Error</b>: ROM ZIP not found!"
