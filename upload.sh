@@ -3,6 +3,15 @@
 BOT_TOKEN="8093034722:AAET1DEX8-TkMnUG3KTtjKWj0FUhzHxryjU"
 CHAT_ID="-1002293479274"
 
+# ---------- helpers ----------
+log() {
+    echo "[$(date '+%H:%M:%S')] $1"
+}
+
+sep() {
+    echo "--------------------------------------------------"
+}
+
 send_telegram() {
     curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
         -d chat_id="${CHAT_ID}" \
@@ -10,9 +19,13 @@ send_telegram() {
         -d parse_mode="HTML" > /dev/null
 }
 
+sep
+log "ROM upload script started"
+sep
+
 PRODUCT_BASE="out/target/product"
 
-echo "[INFO] Detecting device directory..."
+log "Detecting device directory..."
 
 # Detect device directory automatically (first real product dir)
 DEVICE=$(ls -1 "$PRODUCT_BASE" \
@@ -23,29 +36,30 @@ PRODUCT_DIR="$PRODUCT_BASE/$DEVICE"
 
 # Safety check
 if [[ -z "$DEVICE" || ! -d "$PRODUCT_DIR" ]]; then
-    echo "[ERROR] Device directory not detected"
+    log "ERROR: Device directory not detected"
     send_telegram "<b>❌ Build Failed</b>%0ADevice directory not detected!"
     exit 1
 fi
 
-echo "[OK] Device detected: $DEVICE"
+log "Device detected: $DEVICE"
 
-echo "[INFO] Searching for ROM zip..."
+sep
+log "Searching for ROM zip..."
 
 # Detect ROM zip
 ROM_ZIP=$(find "$PRODUCT_DIR" -name "*.zip" | grep -Ev "ota|symbol" | head -n 1)
 
 if [[ ! -f "$ROM_ZIP" ]]; then
-    echo "[ERROR] ROM ZIP not found"
+    log "ERROR: ROM ZIP not found"
     send_telegram "<b>❌ Build Failed</b>%0AROM ZIP not found!"
     exit 1
 fi
 
-echo "[OK] ROM zip found: $(basename "$ROM_ZIP")"
-
 ZIP_NAME=$(basename "$ROM_ZIP")
+log "ROM zip found: $ZIP_NAME"
 
-echo "[INFO] Detecting ROM name and build type..."
+sep
+log "Extracting ROM metadata..."
 
 # Detect ROM name (first part before device codename)
 ROM_NAME=$(echo "$ZIP_NAME" | sed -E "s/-${DEVICE}.*//")
@@ -59,43 +73,51 @@ else
     BUILD_TYPE="Unknown"
 fi
 
-echo "[OK] ROM: $ROM_NAME | Type: $BUILD_TYPE"
+log "ROM Name : $ROM_NAME"
+log "Build    : $BUILD_TYPE"
 
-# Detect images
+sep
+log "Checking image files..."
+
 BOOT_IMG="$PRODUCT_DIR/boot.img"
 VENDOR_BOOT_IMG="$PRODUCT_DIR/vendor_boot.img"
 DTBO_IMG="$PRODUCT_DIR/dtbo.img"
 
-echo "[INFO] Checking image files..."
-[[ -f "$BOOT_IMG" ]] && echo "[OK] boot.img found" || echo "[WARN] boot.img missing"
-[[ -f "$VENDOR_BOOT_IMG" ]] && echo "[OK] vendor_boot.img found" || echo "[WARN] vendor_boot.img missing"
-[[ -f "$DTBO_IMG" ]] && echo "[OK] dtbo.img found" || echo "[WARN] dtbo.img missing"
+[[ -f "$BOOT_IMG" ]] && log "boot.img         : OK" || log "boot.img         : MISSING"
+[[ -f "$VENDOR_BOOT_IMG" ]] && log "vendor_boot.img  : OK" || log "vendor_boot.img  : MISSING"
+[[ -f "$DTBO_IMG" ]] && log "dtbo.img         : OK" || log "dtbo.img         : MISSING"
 
-# Upload helper (UNCHANGED)
+sep
+log "Starting upload stage..."
+
+# Upload helper (ONLY jq stderr suppressed)
 SERVER=$(curl -s https://api.gofile.io/servers | jq -r '.data.servers[0].name')
 
 upload() {
-    [[ -f "$1" ]] || echo "N/A"
+    [[ -f "$1" ]] || { echo "N/A"; return; }
     curl -s -F "file=@$1" "https://${SERVER}.gofile.io/uploadFile" \
-        | jq -r '.data.downloadPage'
+        | jq -r '.data.downloadPage' 2>/dev/null
 }
-
-echo "[INFO] Uploading files..."
 
 ROM_LINK=$(upload "$ROM_ZIP")
 BOOT_LINK=$(upload "$BOOT_IMG")
 VENDOR_BOOT_LINK=$(upload "$VENDOR_BOOT_IMG")
 DTBO_LINK=$(upload "$DTBO_IMG")
 
-echo "[OK] Upload stage completed"
+log "Upload stage completed"
 
-# File info
+sep
+log "Calculating file information..."
+
 SIZE=$(du -h "$ROM_ZIP" | awk '{print $1}')
 MD5SUM=$(md5sum "$ROM_ZIP" | awk '{print $1}')
 
-echo "[INFO] Sending Telegram notification..."
+log "ROM size : $SIZE"
+log "MD5SUM   : $MD5SUM"
 
-# Telegram message
+sep
+log "Sending Telegram notification..."
+
 send_telegram "🟢 | <b>ROM compiled!!</b>
 
 • <b>ROM</b>: ${ROM_NAME}
@@ -109,4 +131,7 @@ send_telegram "🟢 | <b>ROM compiled!!</b>
 • <b>DTBO</b>: <a href=\"${DTBO_LINK}\">Download</a>
 "
 
-echo "[DONE] Telegram notification sent"
+sep
+log "Telegram notification sent"
+log "Script finished"
+sep
