@@ -12,9 +12,18 @@ send_telegram() {
 
 PRODUCT_BASE="out/target/product"
 
-# Detect device directory automatically
-DEVICE=$(ls "$PRODUCT_BASE" | head -n 1)
+# Detect device directory automatically (first real product dir)
+DEVICE=$(ls -1 "$PRODUCT_BASE" \
+    | grep -vE '^(generic|symbols|obj)$' \
+    | head -n 1)
+
 PRODUCT_DIR="$PRODUCT_BASE/$DEVICE"
+
+# Safety check
+if [[ -z "$DEVICE" || ! -d "$PRODUCT_DIR" ]]; then
+    send_telegram "<b>❌ Build Failed</b>%0ADevice directory not detected!"
+    exit 1
+fi
 
 # Detect ROM zip
 ROM_ZIP=$(find "$PRODUCT_DIR" -name "*.zip" | grep -Ev "ota|symbol" | head -n 1)
