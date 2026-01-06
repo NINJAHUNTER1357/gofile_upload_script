@@ -3,8 +3,6 @@
 BOT_TOKEN="8093034722:AAET1DEX8-TkMnUG3KTtjKWj0FUhzHxryjU"
 CHAT_ID="-1002293479274"
 
-BUILD_START_TIME=$(date +%s)
-
 send_telegram() {
     curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
         -d chat_id="${CHAT_ID}" \
@@ -63,12 +61,6 @@ DTBO_LINK=$(upload "$DTBO_IMG")
 SIZE=$(du -h "$ROM_ZIP" | awk '{print $1}')
 MD5SUM=$(md5sum "$ROM_ZIP" | awk '{print $1}')
 
-# Build time
-BUILD_END_TIME=$(date +%s)
-ELAPSED=$((BUILD_END_TIME - BUILD_START_TIME))
-HOURS=$((ELAPSED / 3600))
-MINUTES=$(((ELAPSED % 3600) / 60))
-
 # Telegram message
 send_telegram "🟢 | <b>ROM compiled!!</b>
 
@@ -81,7 +73,5 @@ send_telegram "🟢 | <b>ROM compiled!!</b>
 • <b>BOOT</b>: <a href=\"${BOOT_LINK}\">Download</a>
 • <b>VENDOR_BOOT</b>: <a href=\"${VENDOR_BOOT_LINK}\">Download</a>
 • <b>DTBO</b>: <a href=\"${DTBO_LINK}\">Download</a>
-
-Compilation took ${HOURS} hour(s) and ${MINUTES} minute(s)"
-
+"
 echo "Telegram notification sent."
