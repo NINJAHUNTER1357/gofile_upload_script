@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BOT_TOKEN="8093034722:AAET1DEX8-TkMnUG3KTtjKWj0FUhzHxryjU"
-CHAT_ID="-1002293479274"
+CHAT_ID="-1002534976589"
 
 # ---------- helpers ----------
 log() {
